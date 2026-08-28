@@ -1,0 +1,681 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "API Manajemen Data Kategori - Sistem Penjualan",
+    "description": "Dokumentasi spesifikasi OpenAPI 3.0 (Swagger) untuk proses bisnis pengelolaan data kategori produk (CRUD) pada sistem penjualan berbasis Laravel.\n\n### Struktur Tabel Referensi (`kategori`):\n- **`id_kategori`**: Integer (Primary Key, Auto Increment)\n- **`nama_kategori`**: Varchar(50) (Required / Wajib diisi)\n- **`keterangan`**: Varchar(150) (Optional / Nullable)\n\n### Fitur Utama:\n- **List & Search Kategori**: Mengambil seluruh daftar kategori produk dengan pencarian keyword, sorting dinamis, dan pagination.\n- **Create Kategori**: Menambahkan data kategori baru dengan validasi data.\n- **Detail Kategori**: Menampilkan informasi lengkap satu kategori berdasarkan `id_kategori`.\n- **Update Kategori**: Memperbarui informasi kategori produk (mendukung metode PUT dan PATCH).\n- **Delete Kategori**: Menghapus data kategori dari database.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Tim Pengembang Sistem Penjualan",
+      "email": "developer@example.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000/api",
+      "description": "Local Development Server"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api",
+      "description": "Localhost IP Alternative"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Kategori",
+      "description": "Operasi CRUD untuk manajemen data kategori produk"
+    }
+  ],
+  "paths": {
+    "/kategori": {
+      "get": {
+        "tags": [
+          "Kategori"
+        ],
+        "summary": "Mengambil daftar data kategori produk",
+        "description": "Mengambil seluruh data kategori produk dengan dukungan filter pencarian berdasarkan `nama_kategori` atau `keterangan`, opsi pengurutan (sorting), dan paginasi (pagination).",
+        "operationId": "getKategoriList",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Kata kunci pencarian yang mencocokkan `nama_kategori` atau `keterangan`.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "Elektronik"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "description": "Kolom acuan untuk pengurutan data.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "id_kategori",
+              "enum": [
+                "id_kategori",
+                "nama_kategori",
+                "keterangan"
+              ],
+              "example": "id_kategori"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "description": "Arah pengurutan data (asc untuk ascending, desc untuk descending).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "example": "asc"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "description": "Jumlah data per halaman untuk mengaktifkan paginasi. Jika tidak diisi, seluruh data akan ditampilkan.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 10
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Nomor halaman saat pagination aktif.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar data kategori berhasil diambil.",
+            "headers": {
+              "X-Api-Module": {
+                "$ref": "#/components/headers/X-Api-Module"
+              },
+              "X-Execution-Time-Ms": {
+                "$ref": "#/components/headers/X-Execution-Time-Ms"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KategoriListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Terjadi kesalahan internal pada server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Kategori"
+        ],
+        "summary": "Menambahkan data kategori baru",
+        "description": "Menyimpan data kategori baru ke dalam tabel `kategori`. Field `nama_kategori` wajib diisi (maksimal 50 karakter), sedangkan `keterangan` bersifat opsional (maksimal 150 karakter).",
+        "operationId": "storeKategori",
+        "requestBody": {
+          "required": true,
+          "description": "Payload data kategori yang akan ditambahkan.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreKategoriPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Data kategori berhasil ditambahkan.",
+            "headers": {
+              "X-Api-Module": {
+                "$ref": "#/components/headers/X-Api-Module"
+              },
+              "X-Execution-Time-Ms": {
+                "$ref": "#/components/headers/X-Execution-Time-Ms"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KategoriSingleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validasi gagal, parameter input tidak sesuai aturan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Gagal menambahkan data kategori karena kesalahan server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kategori/{id_kategori}": {
+      "get": {
+        "tags": [
+          "Kategori"
+        ],
+        "summary": "Mengambil detail data kategori",
+        "description": "Mengambil data detail kategori spesifik berdasarkan `id_kategori`.",
+        "operationId": "getKategoriById",
+        "parameters": [
+          {
+            "name": "id_kategori",
+            "in": "path",
+            "description": "Identifier unik (Primary Key) kategori.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail kategori berhasil ditemukan.",
+            "headers": {
+              "X-Api-Module": {
+                "$ref": "#/components/headers/X-Api-Module"
+              },
+              "X-Execution-Time-Ms": {
+                "$ref": "#/components/headers/X-Execution-Time-Ms"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KategoriSingleResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Data kategori dengan `id_kategori` tersebut tidak ditemukan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Terjadi kesalahan internal pada server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Kategori"
+        ],
+        "summary": "Memperbarui data kategori (Full Update)",
+        "description": "Memperbarui seluruh data kategori berdasarkan `id_kategori`.",
+        "operationId": "updateKategoriPut",
+        "parameters": [
+          {
+            "name": "id_kategori",
+            "in": "path",
+            "description": "Identifier unik kategori yang akan diperbarui.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Payload pembaruan data kategori lengkap.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreKategoriPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Data kategori berhasil diperbarui.",
+            "headers": {
+              "X-Api-Module": {
+                "$ref": "#/components/headers/X-Api-Module"
+              },
+              "X-Execution-Time-Ms": {
+                "$ref": "#/components/headers/X-Execution-Time-Ms"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KategoriSingleResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Data kategori tidak ditemukan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validasi gagal pada input data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Terjadi kesalahan internal pada server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Kategori"
+        ],
+        "summary": "Memperbarui sebagian data kategori (Partial Update)",
+        "description": "Memperbarui satu atau beberapa field tertentu pada data kategori berdasarkan `id_kategori`.",
+        "operationId": "updateKategoriPatch",
+        "parameters": [
+          {
+            "name": "id_kategori",
+            "in": "path",
+            "description": "Identifier unik kategori yang akan diperbarui.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Payload pembaruan parsial data kategori.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateKategoriPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Data kategori berhasil diperbarui.",
+            "headers": {
+              "X-Api-Module": {
+                "$ref": "#/components/headers/X-Api-Module"
+              },
+              "X-Execution-Time-Ms": {
+                "$ref": "#/components/headers/X-Execution-Time-Ms"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KategoriSingleResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Data kategori tidak ditemukan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validasi gagal pada input data parsial.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Terjadi kesalahan internal pada server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Kategori"
+        ],
+        "summary": "Menghapus data kategori",
+        "description": "Menghapus rekaman kategori dari basis data secara permanen berdasarkan `id_kategori`.",
+        "operationId": "deleteKategori",
+        "parameters": [
+          {
+            "name": "id_kategori",
+            "in": "path",
+            "description": "Identifier unik kategori yang akan dihapus.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data kategori berhasil dihapus.",
+            "headers": {
+              "X-Api-Module": {
+                "$ref": "#/components/headers/X-Api-Module"
+              },
+              "X-Execution-Time-Ms": {
+                "$ref": "#/components/headers/X-Execution-Time-Ms"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessMessageResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Data kategori tidak ditemukan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Terjadi kesalahan internal pada server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "headers": {
+      "X-Api-Module": {
+        "description": "Identitas modul API penanggung jawab response.",
+        "schema": {
+          "type": "string",
+          "example": "Kategori-CRUD"
+        }
+      },
+      "X-Execution-Time-Ms": {
+        "description": "Waktu eksekusi API dalam satuan milidetik.",
+        "schema": {
+          "type": "string",
+          "example": "8.32"
+        }
+      }
+    },
+    "schemas": {
+      "KategoriItem": {
+        "type": "object",
+        "properties": {
+          "id_kategori": {
+            "type": "integer",
+            "example": 1,
+            "description": "Identifier unik kategori (Primary Key, Auto Increment)"
+          },
+          "nama_kategori": {
+            "type": "string",
+            "maxLength": 50,
+            "example": "Elektronik",
+            "description": "Nama kategori produk"
+          },
+          "keterangan": {
+            "type": "string",
+            "maxLength": 150,
+            "nullable": true,
+            "example": "Perangkat dan aksesoris elektronik",
+            "description": "Deskripsi atau catatan singkat mengenai kategori"
+          }
+        }
+      },
+      "StoreKategoriPayload": {
+        "type": "object",
+        "required": [
+          "nama_kategori"
+        ],
+        "properties": {
+          "nama_kategori": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Nama kategori produk (wajib diisi, maksimal 50 karakter).",
+            "example": "Peralatan Rumah Tangga"
+          },
+          "keterangan": {
+            "type": "string",
+            "maxLength": 150,
+            "nullable": true,
+            "description": "Keterangan atau deskripsi kategori (opsional, maksimal 150 karakter).",
+            "example": "Perlengkapan dan perkakas rumah tangga"
+          }
+        }
+      },
+      "UpdateKategoriPayload": {
+        "type": "object",
+        "properties": {
+          "nama_kategori": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Nama kategori produk (maksimal 50 karakter).",
+            "example": "Peralatan Rumah Tangga & Dapur"
+          },
+          "keterangan": {
+            "type": "string",
+            "maxLength": 150,
+            "nullable": true,
+            "description": "Keterangan atau deskripsi kategori (maksimal 150 karakter).",
+            "example": "Perlengkapan, perabotan, dan perkakas dapur"
+          }
+        }
+      },
+      "KategoriSingleResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Data kategori berhasil ditambahkan."
+          },
+          "data": {
+            "$ref": "#/components/schemas/KategoriItem"
+          }
+        }
+      },
+      "KategoriListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Data kategori berhasil diambil."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KategoriItem"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "current_page": {
+            "type": "integer",
+            "example": 1,
+            "description": "Halaman saat ini (jika menggunakan pagination)"
+          },
+          "last_page": {
+            "type": "integer",
+            "example": 3,
+            "description": "Halaman terakhir (jika menggunakan pagination)"
+          },
+          "per_page": {
+            "type": "integer",
+            "example": 10,
+            "description": "Jumlah data per halaman (jika menggunakan pagination)"
+          },
+          "total": {
+            "type": "integer",
+            "example": 25,
+            "description": "Total keseluruhan rekaman data kategori"
+          }
+        }
+      },
+      "SuccessMessageResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Data kategori berhasil dihapus."
+          }
+        }
+      },
+      "ValidationErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Validasi gagal, silakan periksa data yang Anda masukkan."
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "example": {
+              "nama_kategori": [
+                "Nama kategori wajib diisi.",
+                "Nama kategori maksimal 50 karakter."
+              ],
+              "keterangan": [
+                "Keterangan maksimal 150 karakter."
+              ]
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Data kategori dengan ID 999 tidak ditemukan."
+          }
+        }
+      }
+    }
+  }
+}
