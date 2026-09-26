@@ -1,0 +1,6 @@
+simpan narasi/spesifikasi software di bawah ini dalam bentuk file 
+dengan nama admin.md
+1.tambahkam modul admin pada aplikasi mulai dari pembuatan tabel pada database,form login,form tampilan admin.username admin adalah "dodi",password adalah "agusri"
+2.setelah proses login ,modul ini menampilkan form daftar seluruh indikator
+evaluasi  pemdi beserta dokumen dokumen pdf yang di upload oleh user.masing masing dokumen diberi link untuk download file,serta tombol hapus
+3.tampilkan link admin ini  di landing page aplikasi

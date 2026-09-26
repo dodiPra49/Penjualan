@@ -10,6 +10,13 @@ use Exception;
 
 class PelangganService
 {
+    protected SequenceGeneratorService $sequenceGenerator;
+
+    public function __construct(?SequenceGeneratorService $sequenceGenerator = null)
+    {
+        $this->sequenceGenerator = $sequenceGenerator ?? app(SequenceGeneratorService::class);
+    }
+
     /**
      * Mengambil daftar pelanggan dengan filter pencarian dan paginasi/all.
      */
@@ -100,19 +107,24 @@ class PelangganService
 
     /**
      * Menghasilkan kode pelanggan berurutan otomatis (Contoh: PLG-0001).
+     * Menggunakan Redis Atomic Sequence (INCR) & Atomic Lock dengan database fallback.
      */
     public function generateKodePelanggan(): string
     {
-        $lastPelanggan = Pelanggan::orderBy('id', 'desc')->first();
+        return $this->sequenceGenerator->generate(
+            prefix: 'PLG-',
+            sequenceKey: 'pelanggan',
+            maxDbResolver: function () {
+                $lastPelanggan = Pelanggan::orderBy('id', 'desc')->lockForUpdate()->first();
 
-        if (!$lastPelanggan) {
-            return 'PLG-0001';
-        }
+                if (!$lastPelanggan || empty($lastPelanggan->kode_pelanggan)) {
+                    return 0;
+                }
 
-        $lastNumber = (int) preg_replace('/[^0-9]/', '', $lastPelanggan->kode_pelanggan);
-        $nextNumber = $lastNumber + 1;
-
-        return 'PLG-' . str_pad((string)$nextNumber, 4, '0', STR_PAD_LEFT);
+                return (int) preg_replace('/[^0-9]/', '', $lastPelanggan->kode_pelanggan);
+            },
+            padLength: 4
+        );
     }
 
     /**
