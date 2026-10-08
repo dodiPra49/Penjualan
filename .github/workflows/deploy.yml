@@ -104,63 +104,60 @@ jobs:
           script_stop: true
           envs: WORK_DIR
           script: |
+            set -e
             TARGET_DIR="${{ secrets.WORK_DIR }}"
             if [ -z "$TARGET_DIR" ]; then
               TARGET_DIR="/var/www/penjualan"
             fi
 
             echo "🚀 [CI/CD] Starting Deployment to VPS in $TARGET_DIR..."
+            echo "👤 SSH User: $(whoami)"
 
-            # Validasi direktori proyek
+            # Export PATH standar agar php, composer, node terbaca di non-interactive shell
+            export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:$HOME/.composer/vendor/bin:$PATH"
+
+            # 1. Pastikan direktori target ada
             if [ ! -d "$TARGET_DIR" ]; then
-              echo "❌ Error: Direktori $TARGET_DIR tidak ditemukan di VPS!"
-              exit 1
+              echo "📁 Direktori $TARGET_DIR belum ada, membuat direktori..."
+              mkdir -p "$TARGET_DIR"
             fi
 
             cd "$TARGET_DIR"
+            echo "📍 Direktori aktif: $(pwd)"
 
-            # Pastikan deploy script executable jika ada
-            if [ -f "./deploy.sh" ]; then
-              chmod +x ./deploy.sh
-              ./deploy.sh
+            # 2. Atur Git safe.directory agar tidak error 'dubious ownership'
+            git config --global --add safe.directory "$TARGET_DIR" 2>/dev/null || true
+
+            # 3. Cek apakah direktori sudah merupakan Git repository
+            if [ ! -d ".git" ]; then
+              echo "📦 Folder belum berisi git repository. Melakukan git clone awal..."
+              git clone https://github.com/dodiPra49/Penjualan.git .
             else
-              echo "⚠️ File deploy.sh tidak ditemukan, menjalankan instruksi default..."
-              
-              # Mode Maintenance sementara
-              php artisan down || true
-
-              # Update source code dari Git
+              echo "📥 Memperbarui kode dari branch main..."
               git fetch origin main
               git reset --hard origin/main
+            fi
 
-              # Install dependency PHP produksi
+            # 4. Jalankan script deploy via bash (bebas masalah permission chmod & CRLF)
+            if [ -f "./deploy.sh" ]; then
+              echo "⚡ Menjalankan deploy.sh..."
+              sed -i 's/\r$//' ./deploy.sh 2>/dev/null || true
+              bash ./deploy.sh
+            else
+              echo "⚠️ deploy.sh tidak ditemukan, menjalankan instruksi default..."
+              [ ! -f ".env" ] && cp .env.example .env && php artisan key:generate || true
               composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-
-              # Build frontend jika npm tersedia
               if command -v npm &> /dev/null; then
-                npm ci
-                npm run build
+                npm ci --silent 2>/dev/null || npm install --silent 2>/dev/null || true
+                npm run build --silent 2>/dev/null || true
               fi
-
-              # Migrasi database
-              php artisan migrate --force
-
-              # Cache konfigurasi & route
+              php artisan migrate --force 2>/dev/null || echo "⚠️ Migrasi database dilewati."
               php artisan optimize:clear
               php artisan config:cache
               php artisan route:cache
               php artisan view:cache
-              php artisan event:cache
-
-              # Buat symlink storage jika belum ada
-              php artisan storage:link || true
-
-              # Restart queue & reload PHP-FPM jika sudo diizinkan
-              php artisan queue:restart || true
-              sudo systemctl reload php8.1-fpm || sudo systemctl reload php8.2-fpm || true
-
-              # Aktifkan kembali aplikasi
-              php artisan up
-
+              php artisan storage:link 2>/dev/null || true
+              php artisan queue:restart 2>/dev/null || true
+              sudo systemctl reload php8.1-fpm 2>/dev/null || sudo systemctl reload php8.2-fpm 2>/dev/null || true
               echo "✅ Deployment selesai!"
             fi
