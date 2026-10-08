@@ -1,0 +1,144 @@
+name: Laravel CI/CD to Linux VPS
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    name: Run Tests & Build (CI)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo, sqlite, pdo_sqlite, pdo_mysql, bcmath, redis, zip
+          coverage: none
+
+      - name: Get Composer Cache Directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install NPM Dependencies & Build Assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Prepare Laravel Environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Execute Tests (PHPUnit)
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_DRIVER: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+        run: php artisan test
+
+  deploy:
+    name: Deploy to Linux VPS (CD)
+    needs: [test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH to VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          envs: WORK_DIR
+          script: |
+            TARGET_DIR="${{ secrets.WORK_DIR }}"
+            if [ -z "$TARGET_DIR" ]; then
+              TARGET_DIR="/var/www/penjualan"
+            fi
+
+            echo "🚀 [CI/CD] Starting Deployment to VPS in $TARGET_DIR..."
+
+            # Validasi direktori proyek
+            if [ ! -d "$TARGET_DIR" ]; then
+              echo "❌ Error: Direktori $TARGET_DIR tidak ditemukan di VPS!"
+              exit 1
+            fi
+
+            cd "$TARGET_DIR"
+
+            # Pastikan deploy script executable jika ada
+            if [ -f "./deploy.sh" ]; then
+              chmod +x ./deploy.sh
+              ./deploy.sh
+            else
+              echo "⚠️ File deploy.sh tidak ditemukan, menjalankan instruksi default..."
+              
+              # Mode Maintenance sementara
+              php artisan down || true
+
+              # Update source code dari Git
+              git fetch origin main
+              git reset --hard origin/main
+
+              # Install dependency PHP produksi
+              composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+              # Build frontend jika npm tersedia
+              if command -v npm &> /dev/null; then
+                npm ci
+                npm run build
+              fi
+
+              # Migrasi database
+              php artisan migrate --force
+
+              # Cache konfigurasi & route
+              php artisan optimize:clear
+              php artisan config:cache
+              php artisan route:cache
+              php artisan view:cache
+              php artisan event:cache
+
+              # Buat symlink storage jika belum ada
+              php artisan storage:link || true
+
+              # Restart queue & reload PHP-FPM jika sudo diizinkan
+              php artisan queue:restart || true
+              sudo systemctl reload php8.1-fpm || sudo systemctl reload php8.2-fpm || true
+
+              # Aktifkan kembali aplikasi
+              php artisan up
+
+              echo "✅ Deployment selesai!"
+            fi
