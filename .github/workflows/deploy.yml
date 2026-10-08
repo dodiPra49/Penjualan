@@ -72,13 +72,35 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Validate Deployment Secrets
+        run: |
+          MISSING=0
+          if [ -z "${{ secrets.SSH_HOST }}" ]; then
+            echo "::error::Secret 'SSH_HOST' belum diset di GitHub Secrets! Harap isi IP Publik atau domain VPS Anda."
+            MISSING=1
+          fi
+          if [ -z "${{ secrets.SSH_USER }}" ]; then
+            echo "::error::Secret 'SSH_USER' belum diset di GitHub Secrets! Harap isi username SSH VPS Anda (misal: ubuntu, deployer, root)."
+            MISSING=1
+          fi
+          if [ -z "${{ secrets.SSH_KEY }}" ] && [ -z "${{ secrets.SSH_PASSWORD }}" ]; then
+            echo "::error::Belum ada metode autentikasi! Harap buat salah satu secret: 'SSH_KEY' (Private Key SSH) atau 'SSH_PASSWORD' (Password SSH VPS)."
+            MISSING=1
+          fi
+          if [ $MISSING -eq 1 ]; then
+            echo "❌ Konfigurasi GitHub Secrets belum lengkap. Buka repo GitHub -> Settings -> Secrets and variables -> Actions -> Repository secrets."
+            exit 1
+          fi
+
       - name: Deploy via SSH to VPS
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT != '' && secrets.SSH_PORT || 22 }}
           script_stop: true
           envs: WORK_DIR
           script: |

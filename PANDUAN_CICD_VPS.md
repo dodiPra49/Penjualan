@@ -146,13 +146,16 @@ Buka repository Anda di GitHub:
 2. Klik tombol **New repository secret**.
 3. Tambahkan 5 secret berikut:
 
-| Nama Secret | Deskripsi / Nilai Contoh |
-|---|---|
-| `SSH_HOST` | IP Publik VPS Anda (contoh: `103.123.45.67`) atau domain server |
-| `SSH_USER` | Username SSH untuk login ke VPS (contoh: `ubuntu`, `deployer`, atau `root`) |
-| `SSH_KEY` | Isi **Private Key** lengkap yang disalin dari `cat ~/.ssh/github_deploy` |
-| `SSH_PORT` | Port SSH server (default: `22`) |
-| `WORK_DIR` | Path direktori proyek di VPS (contoh: `/var/www/penjualan`) |
+| Nama Secret | Wajib / Opsional | Deskripsi / Nilai Contoh |
+|---|---|---|
+| `SSH_HOST` | **Wajib** | IP Publik VPS Anda (contoh: `103.123.45.67`) atau domain server |
+| `SSH_USER` | **Wajib** | Username SSH untuk login ke VPS (contoh: `ubuntu`, `deployer`, atau `root`) |
+| `SSH_KEY` | **Pilihan A** | Isi **Private Key SSH** (diawali `-----BEGIN OPENSSH PRIVATE KEY-----` s/d `-----END OPENSSH PRIVATE KEY-----`) |
+| `SSH_PASSWORD` | **Pilihan B** | Password akun SSH VPS (jika tidak menggunakan Private Key) |
+| `SSH_PORT` | Opsional | Port SSH server (default: `22` jika tidak diisi) |
+| `WORK_DIR` | Opsional | Path direktori proyek di VPS (default: `/var/www/penjualan`) |
+
+> 💡 **Pilih salah satu metode autentikasi**: Gunakan `SSH_KEY` (Sangat Direkomendasikan demi keamanan) ATAU gunakan `SSH_PASSWORD`.
 
 ---
 
