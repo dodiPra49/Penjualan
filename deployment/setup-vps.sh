@@ -39,7 +39,8 @@ fi
 
 echo "📁 [6/7] Menyiapkan direktori /var/www/penjualan..."
 mkdir -p /var/www/penjualan
-chown -R www-data:www-data /var/www/penjualan
+DEPLOY_USER="${SUDO_USER:-$USER}"
+chown -R "$DEPLOY_USER":www-data /var/www/penjualan 2>/dev/null || chown -R "$DEPLOY_USER":"$DEPLOY_USER" /var/www/penjualan 2>/dev/null || true
 chmod -R 775 /var/www/penjualan
 
 echo "⚙️ [7/7] Menyesuaikan konfigurasi sudoers untuk reload PHP-FPM tanpa password..."
