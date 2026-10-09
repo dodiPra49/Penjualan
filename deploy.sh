@@ -13,6 +13,19 @@ echo "🕒 [$(date '+%Y-%m-%d %H:%M:%S')] Memulai proses deployment..."
 echo "👤 User aktif: $(whoami) | Direktori: $(pwd)"
 echo "=================================================="
 
+# Verifikasi keberadaan PHP dan Composer
+if ! command -v php &> /dev/null; then
+    echo "❌ ERROR: 'php' belum terinstall atau tidak ada di PATH server VPS!"
+    echo "   Jalankan: sudo apt install -y php8.1 php8.1-cli php8.1-fpm php8.1-mysql ..."
+    exit 127
+fi
+
+if ! command -v composer &> /dev/null; then
+    echo "❌ ERROR: 'composer' belum terinstall di server VPS!"
+    echo "   Jalankan: curl -sS https://getcomposer.org/installer | php && sudo mv composer.phar /usr/local/bin/composer"
+    exit 127
+fi
+
 # 0. Pastikan Git safe.directory aktif
 git config --global --add safe.directory "$(pwd)" 2>/dev/null || true
 
